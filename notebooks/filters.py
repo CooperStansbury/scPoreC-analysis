@@ -3,9 +3,72 @@ import numpy as np
 from collections import Counter
 import matplotlib.pyplot as plt
 import seaborn as sns
+from sklearn.neighbors import NearestNeighbors
 
 import os
 import sys
+
+
+def establishContactSupport(df, windowSize, nContacts, readSupport=False, nReads=2):
+    """A procedure to establish the number of contactw within a eucluiden 
+    distance (in base-pair) of each contact. Isolated contacts will not be supported
+    
+    args:
+        : df (pd.DataFrame): the contact table
+        : windowSize (int): radius, in bp, of supporting zone
+        : nContacts (int): the numner of contact in the supporting zone required
+        : readSupport (bool): if True, the neighbors are required to be on different reads
+        WANRING: this flag radically slows the compute time
+        : nReads (int): if bool flag above is true, how many reads are enough?
+    
+    returns:
+        : df (pd.DataFrame): the contact table adding a column: `contact_has_support`
+    """
+    df['align1_midpoint'] = np.ceil((df['align1_fragment_start'] + df['align1_fragment_end']) / 2).astype(int)
+    df['align2_midpoint'] = np.ceil((df['align2_fragment_start'] + df['align2_fragment_end']) / 2).astype(int)
+    
+    nbrs = NearestNeighbors(n_neighbors=nContacts,
+                            p=2, # euclidean distance
+                            algorithm='ball_tree').fit(df[['align1_midpoint', 'align2_midpoint']])
+    
+    distances, indices = nbrs.kneighbors(df[['align1_midpoint', 'align2_midpoint']])
+    
+    if readSupport:
+        readSupport = []
+        for i in range(indices.shape[0]):
+            idx = indices[i]
+            neighborReads = df.iloc[idx]['read_name'].nunique()
+            if neighborReads >= nReads:
+                readSupport.append(1)
+            else:
+                readSupport.append(0)
+        df['read_support'] = readSupport
+    
+    withinDistance = np.where(distances < windowSize, 1, 0)
+    rowSums = withinDistance.sum(axis=1)
+    isSupported = np.where(rowSums >= nContacts, 1, 0)
+    
+    df['contact_has_support'] = isSupported
+    return df
+
+
+def supportedContactFilter(df, readSupport=False):
+    """A function to filter to out contacts that don't meet the criteria for support 
+    established by the function above
+    
+    args:
+        : df (pd.DataFrame): the contact table
+        : readSupport (bool): if True, the neighbors are required to be on different reads
+    
+    returns:
+        : df (pd.DataFrame): the contact table after filtering
+    """
+    if readSupport:
+        mask = (df['contact_has_support'] == 1) & (df['read_support'] == 1)
+    else:
+        mask = (df['contact_has_support'] == 1)
+    df = df[mask].reset_index(drop=True)
+    return df
 
 
 def adjacentContactFilter(df):
