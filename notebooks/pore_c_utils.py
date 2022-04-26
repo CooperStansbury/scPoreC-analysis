@@ -8,6 +8,21 @@ import os
 import sys
 
 
+def loadAssembly(filepath):
+    """A function to lopad the assembly file
+    
+    args:
+        : filepath (str): file path to vthe assembly information
+    
+    returns:
+        : assmebly (pd.DataFrame): the assembly information table
+    """
+    assembly = pd.read_csv(filepath)
+    assembly['chromEnd'] = assembly['Total length'].cumsum()
+    assembly['chromStart'] = assembly['chromEnd'] - assembly['Total length']
+    assembly['RefSeq accession'] = assembly['RefSeq accession'].str.strip()
+    return assembly
+
 
 def loadContactTable(directory, filetag):
     """A function to load and merge a set of contact tables
