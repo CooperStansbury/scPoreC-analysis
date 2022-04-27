@@ -19,7 +19,7 @@ def establishContactSupport(df, windowSize, nContacts, readSupport=False, nReads
         : nContacts (int): the numner of contact in the supporting zone required
         : readSupport (bool): if True, the neighbors are required to be on different reads
         WANRING: this flag radically slows the compute time
-        : nReads (int): if bool flag above is true, how many reads are enough?
+        : nReads (int): if bool flag above is true, how many reads are enough?   
     
     returns:
         : df (pd.DataFrame): the contact table adding a column: `contact_has_support`

@@ -101,12 +101,11 @@ def cisTransSummary(df):
     
     totalContacts = len(df)
     cisContacts = np.sum(np.where(df['contact_is_cis'] == 1, 1, 0))
-    transContacts = np.sum(np.where(df['contact_is_cis'] == 0, 1, 0))
+    transContacts = totalContacts - cisContacts
     
     metrics = ['Total Contacts', 'cis Contacts', 'trans Contacts']
     values = [totalContacts, cisContacts, transContacts]
     perc = [x/totalContacts for x in values]
-    perc[-1] = 0
     
     res = {
         'Metric' : metrics,
@@ -184,8 +183,6 @@ def getSummary(df):
                      empty,
                      cisTransSummary(df), 
                      empty,
-                     intervsIntraSummary(df),
-                     empty,
                      contactDirectSummary(df)]
                      ).reset_index()
     return res
@@ -200,3 +197,43 @@ def printSummary(res):
             print(f"{row['Metric']} {row['Value']} ({row['Percentage']:.3f})")
         else:
             print(f"{row['Metric']} {row['Value']} {row['Percentage']}")
+
+            
+def filterChomosome(df, refseq):
+    """A function to filter to a single chromosome
+    
+    args:
+        : df (pd.DataFrame): the contact table
+        : reseq (str): Refseq accession string for the chromosome
+        
+    returns:
+        : df (pd.DataFrame): after chromosomal filtering
+    """
+    mask = (df['align1_chrom'] == refseq) & (df['align2_chrom'] == refseq)
+    df = df[mask].reset_index(drop=True)
+    return df
+
+
+def constructHiCSingleChromosome(df, log=True, binary=False):
+    grped = df.groupby(['align1_chrom2Bin', 'align2_chrom2Bin'])['read_name'].count().reset_index() # NOTE: not counting unique here
+
+    binBin = grped.pivot(*grped)
+    if log:
+        binBin = np.log(binBin) # log scale
+
+    binBin = binBin.fillna(0)
+
+    missing = np.setxor1d(binBin.index, binBin.columns)
+
+    # keep only symmetric entries
+    binBin = binBin.drop(index=missing, errors='ignore')
+    binBin = binBin.drop(missing, axis=1, errors='ignore')
+
+    # symmetrize
+    binBin = binBin + binBin.T - np.diag(np.diag(binBin))
+        
+    if binary:
+        binBin = np.where(binBin > 0, 1, 0)
+    return binBin
+
+
