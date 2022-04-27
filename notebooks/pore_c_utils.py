@@ -102,10 +102,9 @@ def cisTransSummary(df):
     totalContacts = len(df)
     cisContacts = np.sum(np.where(df['contact_is_cis'] == 1, 1, 0))
     transContacts = np.sum(np.where(df['contact_is_cis'] == 0, 1, 0))
-    cisTransRatio = cisContacts/transContacts
     
-    metrics = ['Total Contacts', 'cis Contacts', 'trans Contacts', 'Cis/Trans Ratio']
-    values = [totalContacts, cisContacts, transContacts, cisTransRatio]
+    metrics = ['Total Contacts', 'cis Contacts', 'trans Contacts']
+    values = [totalContacts, cisContacts, transContacts]
     perc = [x/totalContacts for x in values]
     perc[-1] = 0
     
