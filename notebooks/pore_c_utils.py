@@ -237,3 +237,38 @@ def constructHiCSingleChromosome(df, log=True, binary=False):
     return binBin
 
 
+def getHic(df, bins, label1, label2):
+    """A function to build a symmetric matrix from contacts while
+    filling missing interactions
+    
+    
+    args:
+        : df (pd.DataFrame): contact table (filtered) with bin names
+        : bins (array): iterable with the number of bins
+        : label1 (str): label of alignment1 bin column
+        : label2 (str): label of alignment2 bin column
+        
+    returns:
+        : A (np.array 2D): symmetric positive matrix with every interaction
+    """
+    grped = df.groupby([label1, label2])['read_name'].count().reset_index() # NOTE: not counting unique here
+    A = grped.pivot(*grped)
+    
+    binNames =  range(1, len(bins)  + 1)
+    
+    missingRows = np.setdiff1d(binNames, A.index)
+    missingColumns = np.setdiff1d(binNames, A.columns)
+
+    # add missing entries
+    A = A.reindex(binNames, fill_value=0)
+    A = A.reindex(binNames, fill_value=0, axis=1)
+    
+    
+    A = A + A.T - np.diag(np.diag(A))
+    
+    # fill nans
+    A = A.fillna(0)
+    
+    return A
+
+

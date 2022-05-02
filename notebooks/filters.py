@@ -9,17 +9,19 @@ import os
 import sys
 
 
-def establishContactSupport(df, windowSize, nContacts, readSupport=False, nReads=2):
+def establishContactSupport(df, radiusThreshold, nContacts, readSupport=False, nReads=2, method=1):
     """A procedure to establish the number of contactw within a eucluiden 
     distance (in base-pair) of each contact. Isolated contacts will not be supported
     
     args:
         : df (pd.DataFrame): the contact table
-        : windowSize (int): radius, in bp, of supporting zone
+        : radiusThreshold (int): radius, in bp, of supporting zone
         : nContacts (int): the numner of contact in the supporting zone required
         : readSupport (bool): if True, the neighbors are required to be on different reads
         WANRING: this flag radically slows the compute time
-        : nReads (int): if bool flag above is true, how many reads are enough?   
+        : nReads (int): if bool flag above is true, how many reads are enough?  
+        : method (int): may be 1 or 2. If 1, contacts require ANT support. if 2, 
+        contacts require FULL support. See note.
     
     returns:
         : df (pd.DataFrame): the contact table adding a column: `contact_has_support`
@@ -29,24 +31,37 @@ def establishContactSupport(df, windowSize, nContacts, readSupport=False, nReads
     
     nbrs = NearestNeighbors(n_neighbors=nContacts,
                             p=2, # euclidean distance
-                            algorithm='ball_tree').fit(df[['align1_midpoint', 'align2_midpoint']])
+                            algorithm='kd_tree').fit(df[['align1_midpoint', 'align2_midpoint']])
     
     distances, indices = nbrs.kneighbors(df[['align1_midpoint', 'align2_midpoint']])
     
     if readSupport:
-        readSupport = []
+        readSupportList = []
         for i in range(indices.shape[0]):
             idx = indices[i]
             neighborReads = df.iloc[idx]['read_name'].nunique()
             if neighborReads >= nReads:
-                readSupport.append(1)
+                readSupportList.append(1)
             else:
-                readSupport.append(0)
-        df['read_support'] = readSupport
+                readSupportList.append(0)
+        df['read_support'] = readSupportList
     
-    withinDistance = np.where(distances < windowSize, 1, 0)
+    withinDistance = np.where(distances < radiusThreshold, 1, 0)
     rowSums = withinDistance.sum(axis=1)
-    isSupported = np.where(rowSums >= nContacts, 1, 0)
+    
+    """
+    Two ideas here:
+        (1) if the contact has no support (rowSum == 0) then discard
+        (2) if the contact has full support (rowSum == nContacts)
+    """
+    if method == 1:
+        # idea 1
+        isSupported = np.where(rowSums > 1, 1, 0)
+    elif method == 2:    
+        # idea 2
+        isSupported = np.where(rowSums >= nContacts, 1, 0)
+    else:
+        raise ValueError('Method must be 1 or 2.')
     
     df['contact_has_support'] = isSupported
     return df
