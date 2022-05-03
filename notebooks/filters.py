@@ -20,20 +20,18 @@ def establishContactSupport(df, radiusThreshold, nContacts, readSupport=False, n
         : readSupport (bool): if True, the neighbors are required to be on different reads
         WANRING: this flag radically slows the compute time
         : nReads (int): if bool flag above is true, how many reads are enough?  
-        : method (int): may be 1 or 2. If 1, contacts require ANT support. if 2, 
+        : method (int): may be 1 or 2. If 1, contacts require ANY support. if 2, 
         contacts require FULL support. See note.
     
     returns:
         : df (pd.DataFrame): the contact table adding a column: `contact_has_support`
     """
-    df['align1_midpoint'] = np.ceil((df['align1_fragment_start'] + df['align1_fragment_end']) / 2).astype(int)
-    df['align2_midpoint'] = np.ceil((df['align2_fragment_start'] + df['align2_fragment_end']) / 2).astype(int)
     
     nbrs = NearestNeighbors(n_neighbors=nContacts,
                             p=2, # euclidean distance
-                            algorithm='kd_tree').fit(df[['align1_midpoint', 'align2_midpoint']])
+                            algorithm='kd_tree').fit(df[['align1_absolute_midpoint', 'align2_absolute_midpoint']])
     
-    distances, indices = nbrs.kneighbors(df[['align1_midpoint', 'align2_midpoint']])
+    distances, indices = nbrs.kneighbors(df[['align1_absolute_midpoint', 'align2_absolute_midpoint']])
     
     if readSupport:
         readSupportList = []
@@ -319,4 +317,19 @@ def removeYChrom(df):
     """
     mask = (df['align1_chrom'] == 'NC_000087.8') | (df['align2_chrom'] == 'NC_000087.8')
     df = df[~mask].reset_index(drop=True)
+    return df
+
+
+def filterChomosome(df, refseq):
+    """A function to filter to a single chromosome
+    
+    args:
+        : df (pd.DataFrame): the contact table
+        : reseq (str): Refseq accession string for the chromosome
+        
+    returns:
+        : df (pd.DataFrame): after chromosomal filtering
+    """
+    mask = (df['align1_chrom'] == refseq) & (df['align2_chrom'] == refseq)
+    df = df[mask].reset_index(drop=True)
     return df

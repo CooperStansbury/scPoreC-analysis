@@ -3,6 +3,7 @@ import numpy as np
 from collections import Counter
 import matplotlib.pyplot as plt
 import seaborn as sns
+import networkx as nx
 
 import os
 import sys
@@ -46,6 +47,65 @@ def loadContactTable(directory, filetag):
             df_list.append(tmp)
 
     df = pd.concat(df_list)
+    return df
+
+
+def mergeAssembly(df, assembly):
+    """A function to merge the assembly positions
+    
+    args:
+        df (pd.DataFrame): the contact table
+        assembly (pd.DataFrame): the assembly table
+    
+    returns:
+        df (pd.DataFrame): the contact table with chromosome information for 
+        each loci
+    """
+    
+    align1Assembly = assembly.copy()
+    align1Assembly.columns = ['align1_chromosome_name',
+                              'align1_chrom_length', 
+                              'align1_genbank',	
+                              'align1_refSeq',
+                              'align1_chrom_end',
+                              'align1_chrom_start']
+    
+    align2Assembly = assembly.copy()
+    align2Assembly.columns = ['align2_chromosome_name',
+                              'align2_chrom_length', 
+                              'align2_genbank',	
+                              'align2_refSeq',
+                              'align2_chrom_end',
+                              'align2_chrom_start']
+    df = pd.merge(df, 
+                  align1Assembly, 
+                  how='left', 
+                  left_on='align1_chrom', 
+                  right_on='align1_refSeq')
+    
+    df = pd.merge(df, 
+                  align2Assembly, 
+                  how='left', 
+                  left_on='align2_chrom', 
+                  right_on='align2_refSeq')
+    
+    """WARNING: drops rows where either
+    alignment is not mappable """
+    
+    mask = (df['align1_refSeq'].notna() & df['align1_refSeq'].notna())
+    df = df[mask].reset_index(drop=True)
+    
+    
+    df['align1_absolute_start'] = df['align1_fragment_start'] + df['align1_chrom_start']
+    df['align2_absolute_start'] = df['align2_fragment_start'] + df['align2_chrom_start']
+    
+    df['align1_absolute_end'] = df['align1_fragment_end'] + df['align1_chrom_start']
+    df['align2_absolute_end'] = df['align2_fragment_end'] + df['align2_chrom_start']
+    
+    df['align1_absolute_midpoint'] = np.ceil((df['align1_absolute_start'] + df['align1_absolute_end'] ) / 2).astype(int)
+    df['align2_absolute_midpoint'] = np.ceil((df['align2_absolute_start'] + df['align2_absolute_end'] ) / 2).astype(int)
+    
+    
     return df
 
 
@@ -198,21 +258,6 @@ def printSummary(res):
         else:
             print(f"{row['Metric']} {row['Value']} {row['Percentage']}")
 
-            
-def filterChomosome(df, refseq):
-    """A function to filter to a single chromosome
-    
-    args:
-        : df (pd.DataFrame): the contact table
-        : reseq (str): Refseq accession string for the chromosome
-        
-    returns:
-        : df (pd.DataFrame): after chromosomal filtering
-    """
-    mask = (df['align1_chrom'] == refseq) & (df['align2_chrom'] == refseq)
-    df = df[mask].reset_index(drop=True)
-    return df
-
 
 def constructHiCSingleChromosome(df, log=True, binary=False):
     grped = df.groupby(['align1_chrom2Bin', 'align2_chrom2Bin'])['read_name'].count().reset_index() # NOTE: not counting unique here
@@ -251,24 +296,20 @@ def getHic(df, bins, label1, label2):
     returns:
         : A (np.array 2D): symmetric positive matrix with every interaction
     """
-    grped = df.groupby([label1, label2])['read_name'].count().reset_index() # NOTE: not counting unique here
-    A = grped.pivot(*grped)
     
-    binNames =  range(1, len(bins)  + 1)
     
-    missingRows = np.setdiff1d(binNames, A.index)
-    missingColumns = np.setdiff1d(binNames, A.columns)
+    grped = df.groupby([label1, label2])['read_name'].count().reset_index() # NOTE: not counting unique here]
+    
+    nBins = len(bins)
+    A = np.zeros((nBins, nBins))
+    
+    for idx, row in grped.iterrows():
+        i = row[label1]
+        j = row[label2]
+        
+        A[i, j] = A[i, j] + 1
+        A[j, i] = A[j, i] + 1
 
-    # add missing entries
-    A = A.reindex(binNames, fill_value=0)
-    A = A.reindex(binNames, fill_value=0, axis=1)
-    
-    
-    A = A + A.T - np.diag(np.diag(A))
-    
-    # fill nans
-    A = A.fillna(0)
-    
     return A
 
 
