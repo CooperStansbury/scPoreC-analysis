@@ -9,7 +9,7 @@ import os
 import sys
 
 
-def establishContactSupport(df, radiusThreshold, nContacts, readSupport=False, nReads=2, method=1):
+def establishContactSupport(df, radiusThreshold, nContacts, readSupport=False, nReads=2, method=1, verbose=False):
     """A procedure to establish the number of contactw within a eucluiden 
     distance (in base-pair) of each contact. Isolated contacts will not be supported
     
@@ -22,6 +22,7 @@ def establishContactSupport(df, radiusThreshold, nContacts, readSupport=False, n
         : nReads (int): if bool flag above is true, how many reads are enough?  
         : method (int): may be 1 or 2. If 1, contacts require ANY support. if 2, 
         contacts require FULL support. See note.
+        : verbose (bool): if true, print value counts of `contact_has_support` flag
     
     returns:
         : df (pd.DataFrame): the contact table adding a column: `contact_has_support`
@@ -29,9 +30,11 @@ def establishContactSupport(df, radiusThreshold, nContacts, readSupport=False, n
     
     nbrs = NearestNeighbors(n_neighbors=nContacts,
                             p=2, # euclidean distance
-                            algorithm='kd_tree').fit(df[['align1_absolute_midpoint', 'align2_absolute_midpoint']])
+                            algorithm='kd_tree').fit(df[['align1_absolute_midpoint', 
+                                                         'align2_absolute_midpoint']])
     
-    distances, indices = nbrs.kneighbors(df[['align1_absolute_midpoint', 'align2_absolute_midpoint']])
+    distances, indices = nbrs.kneighbors(df[['align1_absolute_midpoint', 
+                                             'align2_absolute_midpoint']])
     
     if readSupport:
         readSupportList = []
@@ -62,6 +65,11 @@ def establishContactSupport(df, radiusThreshold, nContacts, readSupport=False, n
         raise ValueError('Method must be 1 or 2.')
     
     df['contact_has_support'] = isSupported
+    
+    
+    if verbose:
+        print(f"{df['contact_has_support'].value_counts()=}")
+    
     return df
 
 
