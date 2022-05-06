@@ -9,6 +9,19 @@ import os
 import sys
 
 
+def loadRawContactDirectory(dirpath, filetags, verbose=True):
+    """A function to load a directory of contact tables"""
+    results = {}
+    for runId in filetags:
+        df = loadContactTable(dirpath, runId)
+        
+        if verbose:
+            print(f"{runId=} {df.shape=}")
+        
+        results[runId] = df
+    return results
+
+
 def loadAssembly(filepath):
     """A function to lopad the assembly file
     

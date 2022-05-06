@@ -20,17 +20,17 @@ def returnBin(position, bins):
     return idx - 1 
 
 
-def wholeGenomeBinData(df, bins, label):
-    df[f'align1_{label}Bin'] = df['align1_absolute_position'].apply(lambda x: returnBin(x, bins))
-    df[f'align2_{label}Bin'] = df['align2_absolute_position'].apply(lambda x: returnBin(x, bins))
+def wholeGenomeBinData(df, bins, label1, label2):
+    df[label1] = df['align1_absolute_midpoint'].apply(lambda x: returnBin(x, bins))
+    df[label2] = df['align2_absolute_midpoint'].apply(lambda x: returnBin(x, bins))
     return df
 
 
-def genomeWideBins(df, assembly, scale=1000000):
+def genomeWideBins(df, assembly, label1, label2, scale=1000000):
     totalLength = assembly['chromEnd'].max()
     bins = getBins(totalLength, scale)
     
-    df = wholeGenomeBinData(df, bins, label='genome')
+    df = wholeGenomeBinData(df, bins, label1, label2)
     return df, bins
 
 

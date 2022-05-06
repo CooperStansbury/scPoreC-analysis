@@ -30,3 +30,38 @@ def plotHiCscatter(df, bin1, bin2, nbins, params):
     ax.xaxis.set_ticks_position('bottom')
     ax.yaxis.set_ticks_position('left')
     plt.gca().set_aspect('equal', adjustable='box')
+    
+    
+def genomewidePlot(df, bins, chromBins, label1, label2):
+    plt.scatter(df[label1], 
+                df[label2], 
+                marker='s', 
+                s=.25, 
+                alpha=0.1, 
+                c='darkblue')
+
+    plt.scatter(df[label2], 
+                df[label1], 
+                marker='s', 
+                s=.25, 
+                alpha=0.1, 
+                c='darkblue')
+
+
+    plt.xlim(0, len(bins) )
+    plt.ylim(len(bins), 0)
+    ax = plt.gca() # Get current axes object
+    ax.xaxis.set_ticks_position('top')
+    ax.xaxis.set_ticks_position('bottom')
+    ax.yaxis.set_ticks_position('left')
+    plt.gca().set_aspect('equal', adjustable='box')
+
+    for k, v in chromBins.items():
+        plt.axvline(x=v, lw=1, c='k', ls=':')
+        plt.axhline(y=v, lw=1, c='k', ls=':')
+
+    plt.xticks(list(chromBins.values()))
+    ax.set_xticklabels(list(chromBins.keys()))
+
+    plt.yticks(list(chromBins.values()))
+    ax.set_yticklabels(list(chromBins.keys()))

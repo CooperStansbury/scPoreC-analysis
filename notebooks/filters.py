@@ -8,6 +8,81 @@ from sklearn.neighbors import NearestNeighbors
 import os
 import sys
 
+# local imports
+import pore_c_utils as pcu
+
+
+def runAllFilters(cells, 
+                  assembly, 
+                  adjacent=True,
+                  chromosome=None, 
+                  verbose=True):
+    """A function to filter all cells 
+    
+    args:
+        : cells (dict of pd.DataFrame): dictionary of contact tables
+        : assembly (pd.DataFrame): assembly information
+        : adjacent (bool): if True, retain only adjacent contacts
+        and drop clique expansion products
+        : chromosome (str): if not `None', select a single chromosome
+        : verbose (bool): controls print() output behavior
+    
+    returns:
+        : results (dict of pd.DataFrame): dictionary of contact tables post filtering
+    """
+    results = {}
+    
+    for runId, df in cells.items():
+       
+        # work on pandas copy (requires more memory)
+        cf = cells[runId].copy()
+        
+        # cleanup
+        cf = chromosomalFilter(cf, assembly)
+        cf = removeYChrom(cf)
+    
+        # chromosome filtering
+        if chromosome is not None:
+            cf = filterChomosome(cf, chromosome)
+            
+        # merge the assmembly info
+        cf = pcu.mergeAssembly(cf, assembly)
+        
+        if verbose:
+            print("------------------------------")
+            print(f"{runId=}")
+    
+        """
+        Filtering section: each filter is hardcoded for now
+        """
+        if adjacent:
+            cf = adjacentContactFilter(cf)
+            
+        cf = selfLoopFilter(cf)
+        cf = mapQFilter(cf, lowerBound=30, upperBound=250)
+        cf = distalContactFilter(cf)
+        cf = closeContactFilter(cf)
+        cf = duplicateContactFilter(cf, retain=1)
+        cf = ligationProductFilter(cf, nProducts=4, verbose=False)
+        cf = establishContactSupport(cf, 
+                                             radiusThreshold=1000000, 
+                                             nContacts=3, 
+                                             readSupport=False,
+                                             method=2)
+        
+        cf = supportedContactFilter(cf, readSupport=False)
+        
+        if verbose:
+            print(f"{cf.shape=}")
+            print("-- -- --")
+            res = pcu.getSummary(cf)
+            pcu.printSummary(res)
+            print()
+            
+        results[runId] = cf
+        
+    return results
+
 
 def establishContactSupport(df, radiusThreshold, nContacts, readSupport=False, nReads=2, method=1, verbose=False):
     """A procedure to establish the number of contactw within a eucluiden 
