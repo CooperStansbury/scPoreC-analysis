@@ -4,6 +4,7 @@ from collections import Counter
 import matplotlib.pyplot as plt
 import seaborn as sns
 import networkx as nx
+import cooler
 
 import os
 import sys
@@ -326,3 +327,101 @@ def getHic(df, bins, label1, label2):
     return A
 
 
+def getChromosomeInfo(coolerObject):
+    """A function to return bin information from a coolr file
+    
+    args:
+        : coolerObject (cooler.api.Cooler): a cooler object
+    
+    returns:
+        : chromInfo (pd.DataFrame): informatio on bin location for each region
+    """
+    newRows = []
+    for chrom in coolerObject.chromnames:
+        chromStart, chromEnd =  coolerObject.extent(chrom)
+        
+        row = {
+            'region' : chrom,
+            'start' : chromStart,
+            'end' : chromEnd,
+            'length' : chromEnd - chromStart,
+        }
+        
+        newRows.append(row)
+    return pd.DataFrame(newRows)
+
+
+def loadNagano2017SingleCell(scoolPath, filename, chromOrder, balance=False, verbose=False):
+    """A function to load a single cell from the nagano dataset
+    
+    NOTE: these are all 1MB scale
+    
+    args:
+        : scoolPath (str): file path to scool file
+        : filename (str): sub cool single cell identifier 
+        : chromOrder (list of str): an ordered array with the correct order of chromosomes
+        : balance (bool): if true, return KR normalized (required `weight` column)
+        : verbose (bool): if true, print chrom ranges
+    
+    returns:
+        : A (np.array): raw contacts, UNORDERED
+        : binRange (pd.DataFrame): the bin ranges for each region
+        : hicIndex (list of int): all index positions ordered according to chrom order
+    """
+    clr = cooler.Cooler(f"{scoolPath}::{filename}")
+    
+    chromInfo = getChromosomeInfo(clr)
+    
+    hicIndex = []
+
+    for chrom in chromOrder:
+        row = chromInfo.loc[chromInfo['region'] == chrom]
+
+        indRange = list(np.arange(row['start'].values, row['end'].values))
+        hicIndex += indRange
+        
+    A = clr.matrix(balance=balance)[:]    
+    return A, chromInfo, hicIndex
+
+
+def loadPorecCooler(filename, assembly, chromOrder, resolution=1000000, balance=False, verbose=False):
+    """A function to load a single cell from the nagano dataset
+    
+    NOTE: these are all 1MB scale
+    
+    args:
+        : filename (str): full path to file
+        : assembly (pd.DataFrame): a dataframe with assembly information
+         : chromOrder (list of str): an ordered array with the correct order of chromosomes
+        : resolution (int): default is 1MB
+        : balance (bool): if true, return KR normalized (required `weight` column)
+        : verbose (bool): if true, print chrom ranges
+    
+    returns:
+        : A (np.array): raw contacts, UNORDERED
+        : binRange (pd.DataFrame): the bin ranges for each region
+        : hicIndex (list of int): all index positions ordered according to chrom order
+    """
+    chromDict = dict(zip(assembly['RefSeq accession'],assembly['Chromosome'].apply(lambda x : f"chr{x}")))
+    
+    clr = cooler.Cooler(f'{filename}::resolutions/{resolution}')
+    
+    chromInfo = getChromosomeInfo(clr)
+    
+    chromInfo['region'] = chromInfo['region'].astype(str)
+    # translate refseq to chromosome names
+    chromInfo['chromName'] = chromInfo['region'].map(chromDict) 
+    
+    # WARNING: dropping non chromosomal reagions
+    chromInfo = chromInfo[chromInfo['chromName'].notna()].reset_index(drop=True)
+    
+    index = []
+
+    for chrom in chromOrder:
+        row = chromInfo.loc[chromInfo['chromName'] == chrom]
+
+        indRange = list(np.arange(row['start'].values, row['end'].values))
+        index += indRange
+        
+    A = clr.matrix(balance=balance)[:]    
+    return A, chromInfo, index

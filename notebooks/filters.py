@@ -62,7 +62,7 @@ def runAllFilters(cells,
         cf = mapQFilter(cf, lowerBound=30, upperBound=250)
         cf = distalContactFilter(cf)
         cf = closeContactFilter(cf)
-        cf = duplicateContactFilter(cf, retain=1)
+        cf = duplicateContactFilter(cf, retain=2)
         cf = ligationProductFilter(cf, nProducts=4, verbose=False)
         cf = establishContactSupport(cf, 
                                              radiusThreshold=1000000, 
