@@ -425,3 +425,68 @@ def loadPorecCooler(filename, assembly, chromOrder, resolution=1000000, balance=
         
     A = clr.matrix(balance=balance)[:]    
     return A, chromInfo, index
+
+
+def getIndices(chromInfo, reIndexed, chromosomeList, lookUpColumn):
+    """A function to get indices of a sub matrix and to order them accordingly
+    
+    args:
+        : chromInfo (pd.DataFrame): a datafram with chromosome positions 
+        in binned genome coordinates 
+        : reIndexed (list of int): current indexing scheme
+        : chromosomeList (list of str): list of regions by name
+        : lookUpColumn (str): the column of chromInfo to use
+    
+    returns:
+        : newIndex (list of int): the new indices for subsetting
+    """
+    newIndex = []
+    
+    for chromosome in chromosomeList:    
+        row = chromInfo.loc[chromInfo[lookUpColumn] == chromosome]
+
+        start = row['start'].values[0]
+        end = row['end'].values[0]
+        chromLength = end - start
+
+        newIndexStart = reIndexed.index(start) + 1
+        subsetIndex = list(range(newIndexStart, newIndexStart+chromLength))
+        
+        newIndex += subsetIndex
+        
+    return newIndex
+
+
+def normByDiag(A):
+    """A function to normalize a matrix by average diagonal values.
+    Args:
+        - A (np.array): a matrix to normalize
+    Returns:
+        - Ahat (np.array): matrix A normalized by the diagonal
+    """
+
+    # build a new matrix of zeros
+    Ahat = np.zeros(A.shape)
+
+
+    for offset in range(len(A)):
+        # get each diagonal, divide it by it's
+        # mean value and add it to the zero matrix
+        diag = np.diagonal(A, offset=offset)
+        
+        
+        mudiag = np.mean(diag)
+
+        
+        if mudiag > 0:
+            normed_diag = diag / mudiag
+        else:
+            normed_diag = [0] * (len(A) - offset)
+        
+        upper = np.diagflat(normed_diag, offset) 
+        lower = np.diagflat(normed_diag, -offset) 
+        
+        Ahat += upper       
+        Ahat += lower       
+        
+    return Ahat
