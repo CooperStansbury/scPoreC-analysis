@@ -194,3 +194,135 @@ def coldEndRemoval(hic, retain=0.1):
         hicTrain[runId] = Ahat
         
     return hicTrain
+
+
+def imputeResource(A, tau):
+    """A function to compute a predicted matrix using the 
+    resource allocation index
+    
+    args:
+        : A (np.array): an adjacency matrix
+        : tau (float): a threshold above which the
+        scores will be converted to binary predicted edges.
+    
+    returns:
+        : Ap (np.array): a predicted matrix that is the union of 
+        edges from matrices P and A.
+    """
+    G = nx.from_numpy_array(A)    
+    P = np.zeros(A.shape)
+    
+    pLink = nx.resource_allocation_index(G)
+    for i, j, p in pLink:
+        P[i, j] = P[i, j] + p
+        P[j, i] = P[j, i] + p
+    
+    # normalize the link scores
+    if not P.max() == 0:
+        P = P / P.max()
+    
+    # threshold based prediction
+    P = np.where(P >= tau, 1, 0)
+    
+    Ap = A + P
+    Ap = np.where(Ap > 0, 1, 0)
+    return Ap
+
+
+def imputeCCPA(A, tau):
+    """A function to compute a predicted matrix using the 
+    CCPA algorithm
+    
+    args:
+        : A (np.array): an adjacency matrix
+        : tau (float): a threshold above which the
+        scores will be converted to binary predicted edges.
+    
+    returns:
+        : Ap (np.array): a predicted matrix that is the union of 
+        edges from matrices P and A.
+    """
+    G = nx.from_numpy_array(A)    
+    P = np.zeros(A.shape)
+    
+    pLink = nx.common_neighbor_centrality(G, alpha=0.5)
+    for i, j, p in pLink:
+        P[i, j] = P[i, j] + p
+        P[j, i] = P[j, i] + p
+    
+    # normalize the link scores
+    if not P.max() == 0:
+        P = P / P.max()
+    
+    # threshold based prediction
+    P = np.where(P >= tau, 1, 0)
+    
+    Ap = A + P
+    Ap = np.where(Ap > 0, 1, 0)
+    return Ap
+
+
+def imputeAdar(A, tau):
+    """A function to compute a predicted matrix using the 
+    Adamic-Adar index
+    
+    args:
+        : A (np.array): an adjacency matrix
+        : tau (float): a threshold above which the
+        scores will be converted to binary predicted edges.
+    
+    returns:
+        : Ap (np.array): a predicted matrix that is the union of 
+        edges from matrices P and A.
+    """
+    G = nx.from_numpy_array(A)    
+    P = np.zeros(A.shape)
+    
+    pLink = nx.adamic_adar_index(G)
+    for i, j, p in pLink:
+        P[i, j] = P[i, j] + p
+        P[j, i] = P[j, i] + p
+    
+    # normalize the link scores
+    if not P.max() == 0:
+        P = P / P.max()
+    
+    # threshold based prediction
+    P = np.where(P >= tau, 1, 0)
+    
+    Ap = A + P
+    Ap = np.where(Ap > 0, 1, 0)
+    return Ap
+
+
+def imputePrefAttach(A, tau):
+    """A function to compute a predicted matrix using the 
+    preferential attachment index
+    
+    args:
+        : A (np.array): an adjacency matrix
+        : tau (float): a threshold above which the
+        scores will be converted to binary predicted edges.
+    
+    returns:
+        : Ap (np.array): a predicted matrix that is the union of 
+        edges from matrices P and A.
+    """
+    G = nx.from_numpy_array(A)    
+    P = np.zeros(A.shape)
+    
+    pLink = nx.preferential_attachment(G)
+    for i, j, p in pLink:
+        P[i, j] = P[i, j] + p
+        P[j, i] = P[j, i] + p
+    
+    # normalize the link scores
+    if not P.max() == 0:
+        P = P / P.max()
+    
+    # threshold based prediction
+    P = np.where(P >= tau, 1, 0)
+    
+    Ap = A + P
+    Ap = np.where(Ap > 0, 1, 0)
+    return Ap
