@@ -3,7 +3,7 @@ MATLAB_data/*
 data/*
 *.mat
 *.npz
-
+*.csv
 
 
 # Byte-compiled / optimized / DLL files
