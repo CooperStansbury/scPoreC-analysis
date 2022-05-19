@@ -228,7 +228,7 @@ def imputeEdges(A, tau, method=1, return_scores=True):
     elif method == 3:
         linkScores = nx.adamic_adar_index(G)
     elif method == 4:
-        linkScores = nx.common_neighbor_centrality(G, alpha=0.5)
+        linkScores = nx.common_neighbor_centrality(G, alpha=0.1)
     
     for i, j, s in linkScores:
         scores[i, j] = scores[i, j] + s
