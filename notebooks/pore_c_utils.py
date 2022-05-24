@@ -4,6 +4,7 @@ from collections import Counter
 import matplotlib.pyplot as plt
 import seaborn as sns
 import networkx as nx
+from scipy.linalg import toeplitz
 import cooler
 
 import os
@@ -511,22 +512,84 @@ def forceAdjacentConnections(A):
     return Ahat
 
 
-def dropZeroRows(A):
+def dropZeroRows(A, threshold=0):
     """A function to remove the zero count columns and rows from
     a symmetric matrix 
     
     args:
         : A (np.array): a symmetric matrix
+        : threshold (int): number of contacts necesary to keep
     
     returns:
         : Ahat (np.array): a matrix with REDUCED dimensionality
     """
-    
     rowSums = A.sum(axis=0)
-    rmInd = np.argwhere(rowSums == 0)
+    rmInd = np.argwhere(rowSums <= threshold)
     
     Ahat = A.copy()
     
     Ahat = np.delete(Ahat, rmInd, axis=0)
     Ahat = np.delete(Ahat, rmInd, axis=1)
     return Ahat
+
+
+def filteredDatatoDict(filepath):
+    """A function to reload the data into separate dataframes 
+    
+    args:
+        : filepath (str): the location of the `.csv` file
+    
+    returns:
+        : filteredCells (dict): keys are run ids and values are 
+        filtered contact tables (unbinned)
+    """
+    df = pd.read_csv(filepath)
+    filteredCells = {}
+    
+    for runId in df['cell'].unique():
+        cellFrame = df[df['cell'] == runId]
+        
+        filteredCells[runId] = cellFrame
+
+    return filteredCells
+
+
+def getToeplitz(A):
+    """A function to get the toeplitz from the observed matrix 
+    
+    args:
+        : A (np.array): the contact map
+    
+    returns:
+        : E (np.array): the expected contact map
+    """
+    
+    muDiags = []
+    
+    for offset in range(len(A)):
+        # get each diagonal, divide it by it's
+        # mean value and add it to the zero matrix
+        mudiag = np.mean(np.diagonal(A, offset=offset))
+        muDiags.append(mudiag)
+        
+    E = toeplitz(muDiags, muDiags)
+    return E
+
+
+def normalizeToeplitz(O):
+    """A function to normalize and input matrix by the 
+    mean diagonal value 
+    
+    args:
+        : O (np.array): the 2d observed matrix to normalize
+    
+    returns:
+        : A (np.array) of the same shape normalized by the diagonals
+    """
+    
+    E = getToeplitz(O)
+    A = np.divide(O, E)
+    
+    # handle NaNs
+    A = np.where(np.isnan(A), 0, A)
+    return A
