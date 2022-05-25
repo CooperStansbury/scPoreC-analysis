@@ -493,12 +493,13 @@ def normByDiag(A):
     return Ahat
 
 
-def forceAdjacentConnections(A):
+def forceAdjacentConnections(A, num=1):
     """A function to ensure that all adjcent genomic 
     loci are connected. Input is assumed to be binary. 
     
     args:
         : A (np.array): unweighted adjacency matrix
+        : num (float): the value to set the off diagonal to
     
     returns:
         : Ahat (np.array): unweighted adjacency matrix with all i, i+1
@@ -507,18 +508,19 @@ def forceAdjacentConnections(A):
     Ahat = A.copy()
     
     for i in range(len(Ahat) - 1):
-        Ahat[i, i+1] = 1
-        Ahat[i+1, i] = 1
+        Ahat[i, i+1] = num
+        Ahat[i+1, i] = num
     return Ahat
 
 
-def dropZeroRows(A, threshold=0):
+def dropZeroRows(A, threshold=0, return_ind=False):
     """A function to remove the zero count columns and rows from
     a symmetric matrix 
     
     args:
         : A (np.array): a symmetric matrix
         : threshold (int): number of contacts necesary to keep
+        : return_ind (bool): if true, return the indices of dropped rows
     
     returns:
         : Ahat (np.array): a matrix with REDUCED dimensionality
@@ -530,7 +532,12 @@ def dropZeroRows(A, threshold=0):
     
     Ahat = np.delete(Ahat, rmInd, axis=0)
     Ahat = np.delete(Ahat, rmInd, axis=1)
-    return Ahat
+    
+    if return_ind:
+        return Ahat, rmInd
+    else:
+        return Ahat
+    
 
 
 def filteredDatatoDict(filepath):
