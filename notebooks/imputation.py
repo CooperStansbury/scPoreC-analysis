@@ -196,7 +196,7 @@ def coldEndRemoval(hic, retain=0.1):
     return hicTrain
 
 
-def imputeEdges(A, tau, method=1, return_scores=True):
+def imputeEdges(A, tau, method=1, return_scores=True, alpha=0.1):
     """A function to compute a predicted matrix using the 
     resource allocation index
     
@@ -212,6 +212,7 @@ def imputeEdges(A, tau, method=1, return_scores=True):
             (3) Adamic-Adar index
             (4) CCPA
         : return_scores (bool): if true, return the score matrix
+        : alpha (float): the alpha para for CCPA
     
     returns:
         : Ahat (np.array): a predicted matrix that is the union of 
@@ -228,7 +229,7 @@ def imputeEdges(A, tau, method=1, return_scores=True):
     elif method == 3:
         linkScores = nx.adamic_adar_index(G)
     elif method == 4:
-        linkScores = nx.common_neighbor_centrality(G, alpha=0.1)
+        linkScores = nx.common_neighbor_centrality(G, alpha=alpha)
     
     for i, j, s in linkScores:
         scores[i, j] = scores[i, j] + s

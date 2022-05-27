@@ -561,11 +561,12 @@ def filteredDatatoDict(filepath):
     return filteredCells
 
 
-def getToeplitz(A):
+def getToeplitz(A, return_means=False):
     """A function to get the toeplitz from the observed matrix 
     
     args:
         : A (np.array): the contact map
+        : return_means (bool): if true, return the means
     
     returns:
         : E (np.array): the expected contact map
@@ -580,7 +581,11 @@ def getToeplitz(A):
         muDiags.append(mudiag)
         
     E = toeplitz(muDiags, muDiags)
-    return E
+    
+    if return_means:
+        return E, muDiags
+    else:
+        return E
 
 
 def normalizeToeplitz(O):
@@ -600,3 +605,17 @@ def normalizeToeplitz(O):
     # handle NaNs
     A = np.where(np.isnan(A), 0, A)
     return A
+
+
+def pageRankNorm(A, d=0.85):
+    """A function to normalize via the PageRank proc
+    
+    args:
+        : A (np.array): input matrix
+        
+    returns:
+        : Ahat (np.array): the normalized input matrix
+    """
+    n = A.shape[1]
+    Ahat = (d * A + (1 - d) / n)
+    return Ahat
