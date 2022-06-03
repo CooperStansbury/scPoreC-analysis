@@ -619,3 +619,16 @@ def pageRankNorm(A, d=0.85):
     n = A.shape[1]
     Ahat = (d * A + (1 - d) / n)
     return Ahat
+
+
+def Abin(A, t=0):
+    """A function to binarize a matrix by a threshold
+    
+    args:
+        : A (np.array): matrix to binarize
+        : t (int): a threshold
+        
+    returns:
+        : Ahat (np.array): a binary matrix
+    """
+    return np.where(A > t, 1, 0)
