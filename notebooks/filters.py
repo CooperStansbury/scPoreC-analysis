@@ -15,6 +15,10 @@ import pore_c_utils as pcu
 def runAllFilters(cells, 
                   assembly, 
                   adjacent=True,
+                  selfLoop=True,
+                  distal=False,
+                  ligationProduct=True,
+                  support=True,
                   chromosome=None, 
                   verbose=True):
     """A function to filter all cells 
@@ -24,6 +28,13 @@ def runAllFilters(cells,
         : assembly (pd.DataFrame): assembly information
         : adjacent (bool): if True, retain only adjacent contacts
         and drop clique expansion products
+        : selfLoop (bool): if true, drop contacts between identical fragments
+        : distal (bool): if true, drop adjacent contacts that are far apart 
+        on the read
+        : ligationProduct (bool) if true, drop fragments that are in excess of
+        the number of possible ligation products for a single nucleus 
+        : support (bool): if true, drop contacts that are sufficiently isolated 
+        from other contacts
         : chromosome (str): if not `None', select a single chromosome
         : verbose (bool): controls print() output behavior
     
@@ -58,19 +69,28 @@ def runAllFilters(cells,
         if adjacent:
             cf = adjacentContactFilter(cf)
             
-        cf = selfLoopFilter(cf)
+        if selfLoop:
+            cf = selfLoopFilter(cf)
+        
         cf = mapQFilter(cf, lowerBound=30, upperBound=250)
-        cf = distalContactFilter(cf)
+        
+        if distal:
+            cf = distalContactFilter(cf)
+            
         cf = closeContactFilter(cf)
         cf = duplicateContactFilter(cf, retain=2)
-        cf = ligationProductFilter(cf, nProducts=4, verbose=False)
-        cf = establishContactSupport(cf, 
-                                             radiusThreshold=1000000, 
-                                             nContacts=3, 
-                                             readSupport=False,
-                                             method=2)
         
-        cf = supportedContactFilter(cf, readSupport=False)
+        if ligationProduct:
+            cf = ligationProductFilter(cf, nProducts=4, verbose=False)
+            
+        if support:
+            cf = establishContactSupport(cf, 
+                                         radiusThreshold=1000000, 
+                                         nContacts=3, 
+                                         readSupport=False,
+                                         method=2)
+        
+            cf = supportedContactFilter(cf, readSupport=False)
         
         if verbose:
             print(f"{cf.shape=}")
